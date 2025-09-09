@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee 
+         https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
+         version="5.0">
+    
+    <display-name>Java Deserialization Demo</display-name>
+    
+    <!-- 测试Servlet -->
+    <servlet>
+        <servlet-name>test-servlet</servlet-name>
+        <servlet-class>com.book.demo.TestServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>test-servlet</servlet-name>
+        <url-pattern>/test</url-pattern>
+    </servlet-mapping>
+    
+    <!-- Jersey REST API -->
+    <servlet>
+        <servlet-name>jersey-servlet</servlet-name>
+        <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+        <init-param>
+            <param-name>jakarta.ws.rs.Application</param-name>
+            <param-value>com.book.demo.HelloApplication</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    
+    <!-- Root Jersey servlet for shell endpoints -->
+    <servlet>
+        <servlet-name>root-jersey-servlet</servlet-name>
+        <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+        <init-param>
+            <param-name>jakarta.ws.rs.Application</param-name>
+            <param-value>com.book.demo.RootApplication</param-value>
+        </init-param>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+    
+    <servlet-mapping>
+        <servlet-name>jersey-servlet</servlet-name>
+        <url-pattern>/api/*</url-pattern>
+    </servlet-mapping>
+    
+    <!-- Root servlet mapping for shell access -->
+    <servlet-mapping>
+        <servlet-name>root-jersey-servlet</servlet-name>
+        <url-pattern>/shell</url-pattern>
+    </servlet-mapping>
+    
+    <!-- 默认欢迎页面 -->
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+    
+</web-app>

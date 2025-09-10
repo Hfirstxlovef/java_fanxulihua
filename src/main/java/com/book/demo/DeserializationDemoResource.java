@@ -1450,14 +1450,14 @@ public class DeserializationDemoResource {
             const resultDiv = document.getElementById('result');
             const resultSummary = document.getElementById('resultSummary');
             
-            // 先立即打开对应类型的内存马页面
+            // 直接打开对应类型的内存马页面
             let shellUrl;
             switch(type) {
                 case 'servlet':
-                    shellUrl = '/shell?action=info&type=servlet';
+                    shellUrl = '/memshell/servlet/';
                     break;
                 case 'filter':
-                    shellUrl = '/api/demo/shell?action=info&type=filter';
+                    shellUrl = '/?filterCmd=whoami';
                     break;
                 case 'listener':
                     shellUrl = '/api/demo/listener-shell?action=info';
@@ -1466,7 +1466,7 @@ public class DeserializationDemoResource {
                     shellUrl = null;
             }
             
-            // 立即打开新窗口，不依赖后续操作
+            // 立即打开新窗口
             if (shellUrl) {
                 window.open(shellUrl, '_blank');
             }

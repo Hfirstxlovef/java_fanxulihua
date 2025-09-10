@@ -47,7 +47,7 @@
     <!-- Root servlet mapping for shell access -->
     <servlet-mapping>
         <servlet-name>root-jersey-servlet</servlet-name>
-        <url-pattern>/shell</url-pattern>
+        <url-pattern>/shell/*</url-pattern>
     </servlet-mapping>
     
     <!-- 默认欢迎页面 -->
